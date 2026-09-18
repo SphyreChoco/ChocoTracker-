@@ -262,3 +262,99 @@ button { color: inherit; }
 html, body, button, a, input, select, textarea, .calendar-day {
   touch-action: manipulation;
 }
+
+/* v5: Tracker / History tabs */
+.app-tabs {
+  border-radius: 14px;
+  padding: 4px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+.tab-btn {
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 720;
+}
+.tab-btn.active {
+  background: rgba(255,255,255,.095);
+  color: #fff;
+}
+.tab-view[hidden] { display: none !important; }
+.tab-view.active {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.recent-heading,
+.history-heading,
+.history-date-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.recent-heading { margin-top: 18px; }
+.recent-heading h3,
+.history-heading h2 { margin: 0; }
+.recent-heading p,
+.history-heading p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: .78rem;
+}
+.recent-heading .ghost-btn { min-height: 40px; }
+
+.history-panel {
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.history-heading { margin-bottom: 16px; }
+.history-heading h2 { font-size: 1.12rem; }
+.history-list { display: grid; gap: 14px; }
+.history-group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.history-date-row {
+  padding: 0 2px;
+  align-items: flex-end;
+}
+.history-date-row > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+.history-date-row > div:first-child strong { font-size: .88rem; }
+.history-date-row > div:first-child span,
+.history-day-numbers span {
+  color: var(--muted);
+  font-size: .7rem;
+}
+.history-day-numbers {
+  display: grid;
+  gap: 2px;
+  text-align: right;
+}
+.history-day-numbers strong { font-size: .88rem; }
+.history-group-list { display: grid; gap: 7px; }
+.bet-date {
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 650;
+  letter-spacing: .02em;
+}
+
+@media (max-width: 560px) {
+  .tab-view.active { gap: 9px; }
+  .recent-heading { align-items: flex-end; }
+  .recent-heading .ghost-btn { padding: 0 10px; font-size: .74rem; }
+  .history-panel { padding: 13px; }
+  .bet-actions { gap: 5px; }
+  .bet-actions button { min-height: 40px; padding: 0 9px; font-size: .76rem; }
+}

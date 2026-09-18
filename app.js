@@ -10,6 +10,7 @@ const state = {
   viewYear: new Date().getFullYear(),
   viewMonth: new Date().getMonth(),
   selectedDate: dateKey(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()),
+  activeTab: 'tracker',
 };
 
 const $ = (id) => document.getElementById(id);
@@ -33,10 +34,31 @@ function signedMoney(value) {
   return `${sign}${money(value)}`;
 }
 
+function resultLabel(result) {
+  return ({
+    pending: 'PENDING',
+    win: 'WIN',
+    win_half: 'WIN HALF',
+    loss: 'LOSS',
+    loss_half: 'LOSS HALF',
+    push: 'PUSH',
+  })[result] || String(result).toUpperCase();
+}
+
 function profitForBet(bet) {
   if (bet.result === 'win') return bet.stake * (bet.odds - 1);
+  if (bet.result === 'win_half') return (bet.stake * (bet.odds - 1)) / 2;
   if (bet.result === 'loss') return -bet.stake;
+  if (bet.result === 'loss_half') return -bet.stake / 2;
   return 0;
+}
+
+function isWinResult(result) {
+  return result === 'win' || result === 'win_half';
+}
+
+function isLossResult(result) {
+  return result === 'loss' || result === 'loss_half';
 }
 
 function escapeHTML(value) {
@@ -182,7 +204,7 @@ function renderCalendar() {
   renderMonthSummary();
 }
 
-function renderSelectedDay() {
+function renderSelectedDayHeader() {
   const stats = statsForDate(state.selectedDate);
   const { year, month, day } = parseDateKey(state.selectedDate);
   const date = new Date(year, month, day);
@@ -193,57 +215,142 @@ function renderSelectedDay() {
   $('selectedDaySummary').textContent = stats.list.length
     ? `${stats.list.length} bets · Stake ${money(stats.stake)} · P/L ${signedMoney(stats.pl)} · ROI ${stats.roi > 0 ? '+' : ''}${stats.roi.toFixed(1)}%`
     : 'No bets yet';
+}
 
+function createBetCard(bet, { showDate = false } = {}) {
+  const pl = profitForBet(bet);
+  const card = document.createElement('article');
+  card.className = 'bet-card';
+  if (isWinResult(bet.result)) card.classList.add('win');
+  if (isLossResult(bet.result)) card.classList.add('loss');
+
+  const tone = pl > 0 ? 'positive' : pl < 0 ? 'negative' : '';
+  const statusTone = isWinResult(bet.result) ? 'positive' : isLossResult(bet.result) ? 'negative' : '';
+  const dateLine = showDate ? `<div class="bet-date">${escapeHTML(formatHistoryDate(bet.date))}</div>` : '';
+
+  card.innerHTML = `
+    ${dateLine}
+    <div class="bet-card-main">
+      <div class="bet-card-copy">
+        <strong>${escapeHTML(bet.match)}</strong>
+        <div class="bet-meta">${escapeHTML(bet.market)} · @${bet.odds.toFixed(2)} · ${money(bet.stake)}</div>
+      </div>
+      <div class="bet-result ${tone}">
+        <span class="bet-status ${statusTone}">${resultLabel(bet.result)}</span>
+        <span>${bet.result === 'pending' ? '—' : signedMoney(pl)}</span>
+      </div>
+    </div>
+    <div class="bet-actions">
+      <button type="button" data-action="win" data-id="${bet.id}" class="positive">Win</button>
+      <button type="button" data-action="win_half" data-id="${bet.id}" class="positive">Win ½</button>
+      <button type="button" data-action="loss" data-id="${bet.id}" class="negative">Loss</button>
+      <button type="button" data-action="loss_half" data-id="${bet.id}" class="negative">Loss ½</button>
+      <button type="button" data-action="push" data-id="${bet.id}">Push</button>
+      <button type="button" data-action="delete" data-id="${bet.id}">Delete</button>
+    </div>
+  `;
+  return card;
+}
+
+function renderRecentBets() {
   const list = $('dayBets');
   list.replaceChildren();
 
-  if (!stats.list.length) {
+  const recent = [...state.bets]
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+    .slice(0, 5);
+
+  if (!recent.length) {
     const empty = document.createElement('div');
     empty.className = 'empty-state';
-    empty.textContent = 'No bets for this day';
+    empty.textContent = 'No bets yet';
     list.appendChild(empty);
     return;
   }
 
-  stats.list.forEach((bet) => {
-    const pl = profitForBet(bet);
-    const card = document.createElement('article');
-    card.className = 'bet-card';
-    if (bet.result === 'win') card.classList.add('win');
-    if (bet.result === 'loss') card.classList.add('loss');
+  recent.forEach((bet) => list.appendChild(createBetCard(bet, { showDate: true })));
+}
 
-    const tone = pl > 0 ? 'positive' : pl < 0 ? 'negative' : '';
-    const statusTone = bet.result === 'win' ? 'positive' : bet.result === 'loss' ? 'negative' : '';
-    card.innerHTML = `
-      <div class="bet-card-main">
-        <div class="bet-card-copy">
-          <strong>${escapeHTML(bet.match)}</strong>
-          <div class="bet-meta">${escapeHTML(bet.market)} · @${bet.odds.toFixed(2)} · ${money(bet.stake)}</div>
-        </div>
-        <div class="bet-result ${tone}">
-          <span class="bet-status ${statusTone}">${bet.result.toUpperCase()}</span>
-          <span>${bet.result === 'pending' ? '—' : signedMoney(pl)}</span>
-        </div>
-      </div>
-      <div class="bet-actions">
-        <button type="button" data-action="win" data-id="${bet.id}" class="positive">Win</button>
-        <button type="button" data-action="loss" data-id="${bet.id}" class="negative">Loss</button>
-        <button type="button" data-action="push" data-id="${bet.id}">Push</button>
-        <button type="button" data-action="delete" data-id="${bet.id}">Delete</button>
-      </div>
-    `;
-    list.appendChild(card);
+function formatHistoryDate(key) {
+  const { year, month, day } = parseDateKey(key);
+  return new Date(year, month, day).toLocaleDateString('en-US', {
+    day: 'numeric', month: 'short', year: 'numeric'
   });
+}
+
+function renderHistory() {
+  const wrap = $('historyList');
+  wrap.replaceChildren();
+  $('historySummary').textContent = `${state.bets.length} total bet${state.bets.length === 1 ? '' : 's'}`;
+
+  if (!state.bets.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.textContent = 'No history yet';
+    wrap.appendChild(empty);
+    return;
+  }
+
+  const groups = new Map();
+  [...state.bets]
+    .sort((a, b) => {
+      if (a.date !== b.date) return b.date.localeCompare(a.date);
+      return (b.createdAt || '').localeCompare(a.createdAt || '');
+    })
+    .forEach((bet) => {
+      if (!groups.has(bet.date)) groups.set(bet.date, []);
+      groups.get(bet.date).push(bet);
+    });
+
+  for (const [date, bets] of groups) {
+    const dailyStake = bets.reduce((sum, bet) => sum + bet.stake, 0);
+    const dailyPL = bets.reduce((sum, bet) => sum + profitForBet(bet), 0);
+    const dailyROI = dailyStake > 0 ? (dailyPL / dailyStake) * 100 : 0;
+
+    const group = document.createElement('section');
+    group.className = 'history-group';
+    group.innerHTML = `
+      <div class="history-date-row">
+        <div>
+          <strong>${escapeHTML(formatHistoryDate(date))}</strong>
+          <span>${bets.length} bet${bets.length === 1 ? '' : 's'}</span>
+        </div>
+        <div class="history-day-numbers ${dailyPL > 0 ? 'positive' : dailyPL < 0 ? 'negative' : ''}">
+          <strong>${signedMoney(dailyPL)}</strong>
+          <span>ROI ${dailyROI > 0 ? '+' : ''}${dailyROI.toFixed(1)}%</span>
+        </div>
+      </div>
+      <div class="history-group-list"></div>
+    `;
+    const groupList = group.querySelector('.history-group-list');
+    bets.forEach((bet) => groupList.appendChild(createBetCard(bet)));
+    wrap.appendChild(group);
+  }
 }
 
 function renderAll() {
   renderCalendar();
-  renderSelectedDay();
+  renderSelectedDayHeader();
+  renderRecentBets();
+  renderHistory();
+}
+
+function setActiveTab(tab) {
+  state.activeTab = tab === 'history' ? 'history' : 'tracker';
+  const trackerActive = state.activeTab === 'tracker';
+  $('trackerView').hidden = !trackerActive;
+  $('historyView').hidden = trackerActive;
+  $('trackerView').classList.toggle('active', trackerActive);
+  $('historyView').classList.toggle('active', !trackerActive);
+  $('trackerTab').classList.toggle('active', trackerActive);
+  $('historyTab').classList.toggle('active', !trackerActive);
+  $('trackerTab').setAttribute('aria-selected', String(trackerActive));
+  $('historyTab').setAttribute('aria-selected', String(!trackerActive));
+  if (!trackerActive) renderHistory();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function clearBetForm(form) {
-  // Clear synchronously and again on the next paint. The second pass handles
-  // iOS standalone/PWA form-state restoration that can reinsert the last values.
   form.reset();
   const clearFields = () => {
     $('matchInput').value = '';
@@ -268,8 +375,9 @@ async function onSubmit(event) {
   const odds = Number($('oddsInput').value);
   const stake = Number($('stakeInput').value);
   const result = $('resultInput').value;
+  const allowedResults = new Set(['pending', 'win', 'win_half', 'loss', 'loss_half', 'push']);
 
-  if (!match || !market || !Number.isFinite(odds) || odds < 1.01 || odds > 1000 || !Number.isFinite(stake) || stake <= 0 || stake > 10000000) {
+  if (!match || !market || !Number.isFinite(odds) || odds < 1.01 || odds > 1000 || !Number.isFinite(stake) || stake <= 0 || stake > 10000000 || !allowedResults.has(result)) {
     $('formMessage').textContent = 'Check Match, Market, Odds and Stake.';
     return;
   }
@@ -285,9 +393,18 @@ async function onSubmit(event) {
     updatedAt: new Date().toISOString(),
   });
 
-  // Clear the form before re-rendering so the newly-added bet appears while
-  // the entry fields immediately return to a clean state.
   clearBetForm(form);
+  renderAll();
+}
+
+async function handleBetAction(event) {
+  const button = event.target.closest('button[data-action]');
+  if (!button) return;
+  const id = Number(button.dataset.id);
+  if (!Number.isInteger(id)) return;
+
+  if (button.dataset.action === 'delete') await deleteBet(id);
+  else await updateBetResult(id, button.dataset.action);
   renderAll();
 }
 
@@ -300,6 +417,7 @@ async function init() {
   state.db = await openDatabase();
   await refreshBets();
   renderAll();
+  setActiveTab('tracker');
 
   $('calendarGrid').addEventListener('click', (event) => {
     const button = event.target.closest('button[data-date]');
@@ -330,29 +448,23 @@ async function init() {
     renderAll();
   });
 
-  // Prevent double-click / double-tap zoom from hijacking app interactions.
+  $('trackerTab').addEventListener('click', () => setActiveTab('tracker'));
+  $('historyTab').addEventListener('click', () => setActiveTab('history'));
+  $('viewHistoryButton').addEventListener('click', () => setActiveTab('history'));
+  $('backToTrackerButton').addEventListener('click', () => setActiveTab('tracker'));
+
   document.addEventListener('dblclick', (event) => {
     event.preventDefault();
   }, { passive: false });
 
   $('betForm').addEventListener('submit', onSubmit);
-
-  $('dayBets').addEventListener('click', async (event) => {
-    const button = event.target.closest('button[data-action]');
-    if (!button) return;
-    const id = Number(button.dataset.id);
-    if (!Number.isInteger(id)) return;
-
-    if (button.dataset.action === 'delete') await deleteBet(id);
-    else await updateBetResult(id, button.dataset.action);
-    renderAll();
-  });
+  $('dayBets').addEventListener('click', handleBetAction);
+  $('historyList').addEventListener('click', handleBetAction);
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
       try {
         const registration = await navigator.serviceWorker.register('./sw.js');
-        // Ask GitHub Pages for a fresh service worker on every launch.
         await registration.update();
       } catch (_) {}
     }, { once: true });

@@ -1,9 +1,9 @@
-const CACHE_NAME = 'bet-tracker-v4';
+const CACHE_NAME = 'bet-tracker-v5';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=4',
-  './app.js?v=4',
+  './styles.css?v=5',
+  './app.js?v=5',
   './manifest.webmanifest',
   './icons/icon-180.png',
   './icons/icon-192.png',
