@@ -241,8 +241,28 @@ function renderAll() {
   renderSelectedDay();
 }
 
+function clearBetForm(form) {
+  // Clear synchronously and again on the next paint. The second pass handles
+  // iOS standalone/PWA form-state restoration that can reinsert the last values.
+  form.reset();
+  const clearFields = () => {
+    $('matchInput').value = '';
+    $('marketInput').value = '';
+    $('oddsInput').value = '';
+    $('stakeInput').value = '';
+    $('resultInput').value = 'pending';
+    $('formMessage').textContent = '';
+  };
+  clearFields();
+  requestAnimationFrame(() => {
+    clearFields();
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  });
+}
+
 async function onSubmit(event) {
   event.preventDefault();
+  const form = event.currentTarget;
   const match = $('matchInput').value.trim();
   const market = $('marketInput').value.trim();
   const odds = Number($('oddsInput').value);
@@ -265,18 +285,10 @@ async function onSubmit(event) {
     updatedAt: new Date().toISOString(),
   });
 
-  // Update the selected day immediately after the database transaction commits.
+  // Clear the form before re-rendering so the newly-added bet appears while
+  // the entry fields immediately return to a clean state.
+  clearBetForm(form);
   renderAll();
-
-  // Explicitly clear every input so iOS/PWA autofill does not leave stale text behind.
-  event.currentTarget.reset();
-  $('matchInput').value = '';
-  $('marketInput').value = '';
-  $('oddsInput').value = '';
-  $('stakeInput').value = '';
-  $('resultInput').value = 'pending';
-  $('formMessage').textContent = '';
-  $('matchInput').focus({ preventScroll: true });
 }
 
 async function init() {
@@ -337,8 +349,12 @@ async function init() {
   });
 
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    window.addEventListener('load', async () => {
+      try {
+        const registration = await navigator.serviceWorker.register('./sw.js');
+        // Ask GitHub Pages for a fresh service worker on every launch.
+        await registration.update();
+      } catch (_) {}
     }, { once: true });
   }
 }
