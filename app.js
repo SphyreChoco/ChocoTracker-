@@ -72,9 +72,21 @@ function dbRequest(mode, callback) {
   return new Promise((resolve, reject) => {
     const tx = state.db.transaction(STORE_NAME, mode);
     const store = tx.objectStore(STORE_NAME);
-    const request = callback(store);
-    request.onsuccess = () => resolve(request.result);
+    let request;
+    let result;
+
+    try {
+      request = callback(store);
+    } catch (error) {
+      reject(error);
+      return;
+    }
+
+    request.onsuccess = () => { result = request.result; };
     request.onerror = () => reject(request.error);
+    tx.oncomplete = () => resolve(result);
+    tx.onerror = () => reject(tx.error || request.error);
+    tx.onabort = () => reject(tx.error || new Error('Database transaction aborted'));
   });
 }
 
@@ -253,10 +265,18 @@ async function onSubmit(event) {
     updatedAt: new Date().toISOString(),
   });
 
-  event.currentTarget.reset();
-  $('resultInput').value = 'pending';
-  $('formMessage').textContent = 'Bet added.';
+  // Update the selected day immediately after the database transaction commits.
   renderAll();
+
+  // Explicitly clear every input so iOS/PWA autofill does not leave stale text behind.
+  event.currentTarget.reset();
+  $('matchInput').value = '';
+  $('marketInput').value = '';
+  $('oddsInput').value = '';
+  $('stakeInput').value = '';
+  $('resultInput').value = 'pending';
+  $('formMessage').textContent = '';
+  $('matchInput').focus({ preventScroll: true });
 }
 
 async function init() {

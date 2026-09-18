@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bet-tracker-v1';
+const CACHE_NAME = 'bet-tracker-v3';
 const ASSETS = [
   './',
   './index.html',
