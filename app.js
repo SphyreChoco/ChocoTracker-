@@ -281,51 +281,29 @@ function formatHistoryDate(key) {
 function renderHistory() {
   const wrap = $('historyList');
   wrap.replaceChildren();
-  $('historySummary').textContent = `${state.bets.length} total bet${state.bets.length === 1 ? '' : 's'}`;
 
-  if (!state.bets.length) {
+  const selected = [...state.bets]
+    .filter((bet) => bet.date === state.selectedDate)
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+
+  const dailyStake = selected.reduce((sum, bet) => sum + bet.stake, 0);
+  const dailyPL = selected.reduce((sum, bet) => sum + profitForBet(bet), 0);
+  const dailyROI = dailyStake > 0 ? (dailyPL / dailyStake) * 100 : 0;
+  const dateLabel = formatHistoryDate(state.selectedDate);
+
+  $('historySummary').textContent = selected.length
+    ? `${dateLabel} · ${selected.length} bet${selected.length === 1 ? '' : 's'} · Stake ${money(dailyStake)} · P/L ${signedMoney(dailyPL)} · ROI ${dailyROI > 0 ? '+' : ''}${dailyROI.toFixed(1)}%`
+    : `${dateLabel} · No bets`;
+
+  if (!selected.length) {
     const empty = document.createElement('div');
     empty.className = 'empty-state';
-    empty.textContent = 'No history yet';
+    empty.textContent = `No bets recorded for ${dateLabel}`;
     wrap.appendChild(empty);
     return;
   }
 
-  const groups = new Map();
-  [...state.bets]
-    .sort((a, b) => {
-      if (a.date !== b.date) return b.date.localeCompare(a.date);
-      return (b.createdAt || '').localeCompare(a.createdAt || '');
-    })
-    .forEach((bet) => {
-      if (!groups.has(bet.date)) groups.set(bet.date, []);
-      groups.get(bet.date).push(bet);
-    });
-
-  for (const [date, bets] of groups) {
-    const dailyStake = bets.reduce((sum, bet) => sum + bet.stake, 0);
-    const dailyPL = bets.reduce((sum, bet) => sum + profitForBet(bet), 0);
-    const dailyROI = dailyStake > 0 ? (dailyPL / dailyStake) * 100 : 0;
-
-    const group = document.createElement('section');
-    group.className = 'history-group';
-    group.innerHTML = `
-      <div class="history-date-row">
-        <div>
-          <strong>${escapeHTML(formatHistoryDate(date))}</strong>
-          <span>${bets.length} bet${bets.length === 1 ? '' : 's'}</span>
-        </div>
-        <div class="history-day-numbers ${dailyPL > 0 ? 'positive' : dailyPL < 0 ? 'negative' : ''}">
-          <strong>${signedMoney(dailyPL)}</strong>
-          <span>ROI ${dailyROI > 0 ? '+' : ''}${dailyROI.toFixed(1)}%</span>
-        </div>
-      </div>
-      <div class="history-group-list"></div>
-    `;
-    const groupList = group.querySelector('.history-group-list');
-    bets.forEach((bet) => groupList.appendChild(createBetCard(bet)));
-    wrap.appendChild(group);
-  }
+  selected.forEach((bet) => wrap.appendChild(createBetCard(bet)));
 }
 
 function renderAll() {
