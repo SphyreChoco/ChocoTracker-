@@ -298,6 +298,11 @@ async function init() {
     renderAll();
   });
 
+  // Prevent double-click / double-tap zoom from hijacking app interactions.
+  document.addEventListener('dblclick', (event) => {
+    event.preventDefault();
+  }, { passive: false });
+
   $('betForm').addEventListener('submit', onSubmit);
 
   $('dayBets').addEventListener('click', async (event) => {

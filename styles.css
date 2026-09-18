@@ -257,3 +257,8 @@ button { color: inherit; }
   .day-stake { font-size: .5rem; }
   .day-pl { font-size: .54rem; }
 }
+
+/* Prevent accidental double-tap zoom inside the app while keeping normal scrolling. */
+html, body, button, a, input, select, textarea, .calendar-day {
+  touch-action: manipulation;
+}
