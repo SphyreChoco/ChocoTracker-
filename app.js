@@ -290,10 +290,11 @@ function renderHistory() {
   const dailyPL = selected.reduce((sum, bet) => sum + profitForBet(bet), 0);
   const dailyROI = dailyStake > 0 ? (dailyPL / dailyStake) * 100 : 0;
   const dateLabel = formatHistoryDate(state.selectedDate);
+  $('historyTitle').textContent = `History · ${dateLabel}`;
 
   $('historySummary').textContent = selected.length
-    ? `${dateLabel} · ${selected.length} bet${selected.length === 1 ? '' : 's'} · Stake ${money(dailyStake)} · P/L ${signedMoney(dailyPL)} · ROI ${dailyROI > 0 ? '+' : ''}${dailyROI.toFixed(1)}%`
-    : `${dateLabel} · No bets`;
+    ? `${selected.length} bet${selected.length === 1 ? '' : 's'} · Stake ${money(dailyStake)} · P/L ${signedMoney(dailyPL)} · ROI ${dailyROI > 0 ? '+' : ''}${dailyROI.toFixed(1)}%`
+    : 'No bets for this day';
 
   if (!selected.length) {
     const empty = document.createElement('div');

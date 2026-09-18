@@ -358,3 +358,5 @@ html, body, button, a, input, select, textarea, .calendar-day {
   .bet-actions { gap: 5px; }
   .bet-actions button { min-height: 40px; padding: 0 9px; font-size: .76rem; }
 }
+
+.build-version{margin:10px 2px 0;text-align:right;font-size:10px;color:#5f6875;opacity:.7}

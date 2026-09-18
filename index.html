@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="styles.css?v=6" />
+  <link rel="stylesheet" href="styles.css?v=7" />
 </head>
 <body>
   <main class="app-shell">
@@ -101,7 +101,7 @@
       <section class="history-panel crystal">
         <div class="history-heading">
           <div>
-            <h2>History</h2>
+            <h2 id="historyTitle">History</h2>
             <p id="historySummary">All recorded bets</p>
           </div>
           <button id="backToTrackerButton" class="ghost-btn" type="button">Tracker</button>
@@ -109,8 +109,9 @@
         <div id="historyList" class="history-list" aria-live="polite"></div>
       </section>
     </section>
+  <div class="build-version" aria-hidden="true">v7</div>
   </main>
 
-  <script src="app.js?v=6" defer></script>
+  <script src="app.js?v=7" defer></script>
 </body>
 </html>
